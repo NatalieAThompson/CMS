@@ -1,0 +1,7 @@
+<form action="/<%= params[:name] %>" method="POST">
+  <dl>
+    <dt><label for="doc_changes">Edit content of <%=params[:name] %>:</label></dt>
+    <dd><textarea rows=10 cols=50 id="doc_changes" name="changes"><%= @file %></textarea></dd>
+  </dl>
+  <button type="submit">Save Changes</button>
+</form>
