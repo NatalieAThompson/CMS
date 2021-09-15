@@ -4,13 +4,11 @@ require "tilt/erubis"
 require "redcarpet"
 require "fileutils"
 
-helpers do
-  def data_path
-    if ENV["RACK_ENV"] == "test"
-      File.expand_path("../test/data/", __FILE__)
-    else
-      File.expand_path("../data/", __FILE__)
-    end
+def data_path
+  if ENV["RACK_ENV"] == "test"
+    File.expand_path("../test/data", __FILE__)
+  else
+    File.expand_path("../data", __FILE__)
   end
 end
 
@@ -24,7 +22,6 @@ configure do
 end
 
 get "/" do
-  @files = Dir.children(data_path)
   erb :index
 end
 
@@ -51,11 +48,11 @@ def load_file(name)
   end
 end
 
-get "/:name" do |name|
-  if name == "new"
-    return erb :new
-  end
+get "/new" do
+  erb :new
+end
 
+get "/:name" do |name|
   file_exists(name)
   load_file(name)
 end
@@ -66,6 +63,35 @@ get "/:name/edit" do |name|
   erb :edit
 end
 
+EXTENSIONS = %w(.txt .md)
+
+def no_extension(file)
+  extension = file.scan(/.(\..+)/)[0]
+  if !extension
+    file + ".txt"
+  elsif !EXTENSIONS.include?(extension[0])
+    file.delete_suffix(extension[0]) + ".txt"
+  else
+    file
+  end
+end
+
+post "/create" do
+  new_file = params[:file_name].strip
+
+  if new_file.empty?
+    session[:message] = "A name is required."
+    status 422
+    erb :new
+  else
+    file = no_extension(new_file)
+    FileUtils.touch File.join(data_path, file)
+    session[:message] = "#{file} was created."
+
+    redirect "/"
+  end
+end
+
 post "/:name" do |name|
   system_path = File.join(data_path, name)
   file_exists(name)
@@ -74,15 +100,3 @@ post "/:name" do |name|
   redirect("/")
 end
 
-post "/" do
-  new_file = params[:file_name].strip
-  if new_file.empty?
-    session[:message] = "A name is required."
-    erb :new
-  else
-    FileUtils.touch File.join(data_path, new_file)
-    session[:message] = "#{new_file} was created."
-
-    redirect "/"
-  end
-end

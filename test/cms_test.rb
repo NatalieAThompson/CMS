@@ -4,7 +4,8 @@ require "minitest/autorun"
 require "rack/test"
 require "fileutils"
 
-require "/home/inunatnat/Documents/CMS/cms.rb"
+# require "/home/inunatnat/Documents/CMS/cms.rb"
+require_relative "../cms"
 
 class CMSTest < Minitest::Test
   include Rack::Test::Methods
@@ -13,19 +14,19 @@ class CMSTest < Minitest::Test
     Sinatra::Application
   end
 
-  # def create_document(name, content = "")
-  #   File.open(File.join(data_path, name), "w") do |file|
-  #     file.write(content)
-  #   end
-  # end
+  def create_document(name, content = "")
+    File.open(File.join(data_path, name), "w") do |file|
+      file.write(content)
+    end
+  end
 
-  # def setup
-  #   FileUtils.mkdir_p(data_path)
+  def setup
+    FileUtils.mkdir_p(data_path)
 
-  #   create_document "about.md"
-  #   create_document "changes.txt"
-  #   create_document "history.txt"
-  # end
+    create_document "about.md"
+    create_document "changes.txt"
+    create_document "history.txt"
+  end
 
   def test_index
       get "/"
@@ -89,15 +90,48 @@ class CMSTest < Minitest::Test
     assert_includes last_response.body, "New content"
   end
 
-  # def test_new
-  #   get "/new"
+  def test_new
+    get "/new"
 
-  #   assert_equal 200, last_response.status
-  #   assert_includes last_response.body, %q(<button type="submit)
-  #   assert_includes last_response.body, %q(id="doc_name)
-  # end
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, %q(<button type="submit)
+    assert_includes last_response.body, %q(id="doc_name)
+  end
 
-  # def teardown
-  #   FileUtils.rm_rf(data_path)
-  # end
+  def test_new_empty_file_name
+    post "/create", file_name: ""
+
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, %q(A name is required.</p>)
+  end
+
+  def new_file_naming(name)
+    post "/create", file_name: name
+
+    assert_equal 302, last_response.status
+
+    get last_response["Location"]
+
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, %q(hello.txt was created)
+
+    get "/"
+    assert_includes last_response.body, "hello.txt"
+  end
+
+  def test_new_file_bad_naming
+    new_file_naming("hello")
+  end
+
+  def test_new_file_bad_extension
+    new_file_naming("hello.alkf")
+  end
+
+  def test_new_file
+   new_file_naming("hello.txt")
+  end
+
+  def teardown
+    FileUtils.rm_rf(data_path)
+  end
 end
